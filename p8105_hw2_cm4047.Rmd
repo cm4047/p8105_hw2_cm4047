@@ -6,12 +6,14 @@ output: github_document
 ---
 
 load library
+
 ```{r}
 library(tidyverse)
 library(readxl)
 ```
 
 define a path to the dataset
+
 ```{r}
 path_to_data = "./data/Trash-Wheel-Collection-Totals-8-6-19.xlsx"
 ```
@@ -35,6 +37,7 @@ Read the Mr. Trashwheel dataset
 ```
 
 Read the 2017 precipitation data.
+
 ```{r}
 precip_2017 =
         read_excel(
@@ -49,6 +52,7 @@ precip_2017 =
 ```
 
 Read the 2018 precipitation data.
+
 ```{r}
 precip_2018 =
         read_excel(
@@ -63,6 +67,7 @@ precip_2018 =
 ```
 
 Combine annual precipitation data.
+
 ```{r}
 month_df =
         tibble(
@@ -73,10 +78,60 @@ precip_df =
         bind_rows(precip_2017, precip_2018)
 
 precip_df =
-        left_join(precip_df, month_df, by = "month")
+        left_join(precip_df, month_df, by = "month") %>% 
+        select(-month)
 ```
 
-This dataset contains information from the Mr. Trashwheel trash collector in Baltimore, Maryland. As trash enters the inner harbor, the trashwheel collects that trash, and stores it in a dumpster. The dataset contains information on year, month, and trash collected, include some specific kinds of trash. There are a total of `r nrow(trashwheel_df)` rows in our final dataset. Additional data sheets include month precipitation data. In this dataset:
+This dataset contains information from the Mr. Trashwheel trash collector in Baltimore, Maryland. As trash enters the inner harbor, the trashwheel collects that trash, and stores it in a dumpster. The dataset contains information on year, month, and trash collected, include some specific kinds of trash. There are a total of `r nrow(trashwheel_df)` rows in our final dataset. Additional data sheets include month precipitation data.The dataset contains information on year, total precipitation, and month names. There are a total of `r nrow(precip_df)` rows in the precipitation dataset. In two datasets:
 
 * The median number of sports balls found in a dumpster in 2017 was `r trashwheel_df %>% filter(year == 2017) %>% pull(sports_balls) %>% median()`
 * The total precipitation in 2018 was `r precip_df %>% filter(year == 2018) %>% pull(total) %>% sum()` inches.
+
+#Problem 2
+
+read the NYC transit data.
+```{r}
+nyc_transit_df = 
+        read_csv("./data/NYC_Transit_Subway_Entrance_And_Exit_Data.csv"
+        ) %>%
+        janitor::clean_names() %>%
+        select(line, station_name, station_latitude, station_longitude, starts_with("route"), entry, vending, entrance_type, ada) %>%
+        mutate(entry = recode(entry, "YES" = T, "NO" = F))  
+```
+
+This dataset contains information about entrances and exits for subway stations in NYC. The dataset contains information on station name, line name, station location(latitude/longitude), routes served for each station, and some information about entrance, vending and ADA compliance. 
+
+
+For my data cleaning steps, first, I use read_csv function to read the dataset from the original csv file. Then, I use clean_names function to clean all the names in this dataset. Thirdly, I use select to retain all the columns which I want to be included in the dataset. Finally, I use mutate function to convert the entry variable from a character variable to a logical variable.  
+
+The dataset contains `r nrow(nyc_transit_df)` rows and `r ncol(nyc_transit_df)` columns. 
+
+The dataset is not tidy enough. For example, the values for line variable contain "4 Avenue", "6 Avenue", and "42nd St Shuttle". These three values are not in the same format. And, there are so many routes(from "route1" to "route2"), which is so complex.   
+
+There are `r nrow(distinct(nyc_transit_df, line, station_name))` distinct stations.  
+There are `r nrow(filter(nyc_transit_df, ada == "TRUE"))` stations with ADA compliant.  
+`r  nrow(filter(nyc_transit_df, vending == "NO", entry == "TRUE"))/nrow(filter(nyc_transit_df, entry == "TRUE"))` of station entrances/exits without vending allow entrance.
+
+Reformat data:
+```{r}
+nyc_transit_df = 
+        nyc_transit_df %>% 
+        mutate(
+                route8 = as.character(route8),
+                route9 = as.character(route9),
+                route10 = as.character(route10),
+                route11 = as.character(route11)
+        )
+nyc_transit_tidy = 
+        nyc_transit_df %>% 
+        pivot_longer(
+                route1:route11,
+                values_to = "route_name",
+                names_to = "route_number"
+) %>%
+        separate(route_number, into = c("route", "route_number"), sep = 5) %>% 
+        select(-route)
+```
+
+There are `r filter(nyc_transit_tidy, route_name == "A") %>% distinct(line, station_name) %>%  nrow()` distinct stations serve the A train. Of the `r filter(nyc_transit_tidy, route_name == "A") %>% distinct(line, station_name) %>%  nrow()` stations that serve the A train, `r filter(nyc_transit_tidy, route_name == "A", ada == "TRUE") %>%  distinct(line, station_name) %>%  nrow()` are ADA compliant.
+
