@@ -5,14 +5,14 @@ date: "9/28/2020"
 output: github_document
 ---
 
-load library
+Load library:
 
 ```{r}
 library(tidyverse)
 library(readxl)
 ```
 
-define a path to the dataset
+Define a path to the dataset:
 
 ```{r}
 path_to_data = "./data/Trash-Wheel-Collection-Totals-8-6-19.xlsx"
@@ -89,7 +89,7 @@ This dataset contains information from the Mr. Trashwheel trash collector in Bal
 
 #Problem 2
 
-read the NYC transit data.
+Read the NYC transit data.
 
 ```{r}
 nyc_transit_df = 
