@@ -90,10 +90,10 @@ This dataset contains information from the Mr. Trashwheel trash collector in Bal
 #Problem 2
 
 read the NYC transit data.
+
 ```{r}
 nyc_transit_df = 
-        read_csv("./data/NYC_Transit_Subway_Entrance_And_Exit_Data.csv"
-        ) %>%
+        read_csv("./data/NYC_Transit_Subway_Entrance_And_Exit_Data.csv") %>%
         janitor::clean_names() %>%
         select(line, station_name, station_latitude, station_longitude, starts_with("route"), entry, vending, entrance_type, ada) %>%
         mutate(entry = recode(entry, "YES" = T, "NO" = F))  
@@ -106,13 +106,14 @@ For my data cleaning steps, first, I use read_csv function to read the dataset f
 
 The dataset contains `r nrow(nyc_transit_df)` rows and `r ncol(nyc_transit_df)` columns. 
 
-The dataset is not tidy enough. For example, the values for line variable contain "4 Avenue", "6 Avenue", and "42nd St Shuttle". These three values are not in the same format. And, there are so many routes(from "route1" to "route2"), which is so complex.   
+The dataset is not tidy enough. For example, the values for line variable contain "4 Avenue", "6 Avenue", and "42nd St Shuttle". These three values are not in the same format. And, there are so many routes(from "route1" to "route2"), which is so complex. Moreover, some lines have same values for each variable, which is meaningless.  
 
 There are `r nrow(distinct(nyc_transit_df, line, station_name))` distinct stations.  
-There are `r nrow(filter(nyc_transit_df, ada == "TRUE"))` stations with ADA compliant.  
-`r  nrow(filter(nyc_transit_df, vending == "NO", entry == "TRUE"))/nrow(filter(nyc_transit_df, entry == "TRUE"))` of station entrances/exits without vending allow entrance.
+There are `r filter(nyc_transit_df, ada =="TRUE") %>%  distinct(line, station_name) %>% nrow()` stations with ADA compliant.  
+`r  nrow(filter(nyc_transit_df, vending == "NO", entry == "TRUE"))/nrow(filter(nyc_transit_df, vending == "NO"))` of station entrances/exits without vending allow entrance.
 
 Reformat data:
+
 ```{r}
 nyc_transit_df = 
         nyc_transit_df %>% 
@@ -133,5 +134,84 @@ nyc_transit_tidy =
         select(-route)
 ```
 
-There are `r filter(nyc_transit_tidy, route_name == "A") %>% distinct(line, station_name) %>%  nrow()` distinct stations serve the A train. Of the `r filter(nyc_transit_tidy, route_name == "A") %>% distinct(line, station_name) %>%  nrow()` stations that serve the A train, `r filter(nyc_transit_tidy, route_name == "A", ada == "TRUE") %>%  distinct(line, station_name) %>%  nrow()` are ADA compliant.
+There are `r filter(nyc_transit_tidy, route_name == "A") %>% distinct(line, station_name) %>%  nrow()` distinct stations serve the A train. Of the `r filter(nyc_transit_tidy, route_name == "A") %>% distinct(line, station_name) %>% nrow()` stations that serve the A train, `r filter(nyc_transit_tidy, route_name == "A", ada == "TRUE") %>%  distinct(line, station_name) %>%  nrow()` are ADA compliant.
+
+#Problem 3
+
+Load and clean data in pols-month.csv:
+
+```{r}
+month_df = tibble(
+                  month = 1:12,
+                  month_name = month.name)
+pols_month_df = 
+          read_csv("./data/fivethirtyeight_datasets/pols-month.csv") %>%
+          janitor::clean_names() %>%
+          separate(mon, into = c("year", "month", "day"), sep = "-") %>% 
+          mutate(
+                  month = as.integer(month)) %>% 
+         left_join(month_df, by = "month") %>% 
+         select(-month) %>% 
+         relocate(year, month_name) %>% 
+         rename("month" = "month_name") %>% 
+         mutate(
+                 president = recode(prez_gop, "1" = "gop", "2" = "gop", "0" = "dem")
+         ) %>% 
+        select(-prez_dem) %>%
+        select(-prez_gop) %>% 
+        select(-day)
+```
+
+Load and clean data in snp.csv:
+
+```{r}
+snp_df = 
+        read_csv("./data/fivethirtyeight_datasets/snp.csv") %>%
+        janitor::clean_names() %>%
+        separate(date, into = c("month", "day", "year"), sep = "/") %>% 
+        mutate(
+                month = as.integer(month)) %>%
+        left_join(month_df, by = "month") %>% 
+         select(-month, -day) %>% 
+         relocate(year, month_name) %>% 
+         rename("month" = "month_name") 
+```
+
+Load and clean data in unemployment.csv:
+
+```{r}
+month_name_df = tibble(
+        month = str_to_lower(month.abb),
+        month_name = month.name
+)
+unemploy_df = 
+        read_csv("./data/fivethirtyeight_datasets/unemployment.csv") %>%
+        janitor::clean_names() %>%
+        pivot_longer(
+                jan:dec,
+                values_to = "unemployment_rate",
+                names_to = "month"
+        ) %>%
+        left_join(month_name_df, by = "month") %>% 
+        select(-month) %>% 
+        rename(month = month_name) %>% 
+        relocate(year, month)
+```
+
+Then,join all the datasets:
+
+```{r}
+joint_df = merge(pols_month_df, snp_df) %>% 
+        merge(unemploy_df)
+```
+There are four datasets in total. The first dataset is the pols_month_df dataset, which contains the information on year, month, type of president, number of republican governors, number of republican senators, number of republican representatives, number of democratic governors, number of democratic senators, number of democratic representatives on the associated date. It have `r nrow(pols_month_df)` rows and `r ncol(pols_month_df)` columns in total. The range of year is ranged from `r min(pull(pols_month_df, year))` to `r max(pull(pols_month_df, year))`. The key variable is the president variable which indicates the information about whether the president was republican or democratic on the associated date.  
+
+The second dataset is the snp_df dataset. It contains the information on year, month, and the closing values of the S&P stock index on the associated date. It have `r nrow(snp_df)` rows and `r ncol(snp_df)` columns in total. The range of year is ranged from `r min(pull(snp_df, year))` to `r max(pull(snp_df, year))`. The key variable is the close variable which shows the closing values of the S&P stock index on the associated date.  
+
+The third dataset is the unemploy_df dataset. It contains the information on year, month, and percentage of unemployment on the associated date. It have `r nrow(unemploy_df)` rows and `r ncol(unemploy_df)` columns in total. The range of year is ranged from `r min(pull(unemploy_df, year))` to `r max(pull(unemploy_df, year))`. The key variable is the unemployment_rate variable which contains the information on the percentage of unemployment on the associated date. 
+
+The last dataset is the joint_df dataset, which contains the information on year, month, type of president, number of republican governors, number of republican senators, number of republican representatives, number of democratic governors, number of democratic senators, number of democratic representatives, the closing values of the S&P stock index, and percentage of unemployment on the associated date. It have `r nrow(joint_df)` rows and `r ncol(joint_df)` columns in total. The range of year is ranged from `r min(pull(joint_df, year))` to `r max(pull(joint_df, year))`.
+
+
+
 
