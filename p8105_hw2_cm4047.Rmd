@@ -127,14 +127,14 @@ nyc_transit_tidy =
         nyc_transit_df %>% 
         pivot_longer(
                 route1:route11,
-                values_to = "route_name",
-                names_to = "route_number"
+                names_to = "route_name",
+                values_to = "route_number"
 ) %>%
-        separate(route_number, into = c("route", "route_number"), sep = 5) %>% 
+        separate(route_name, into = c("route", "route_name"), sep = 5) %>% 
         select(-route)
 ```
 
-There are `r filter(nyc_transit_tidy, route_name == "A") %>% distinct(line, station_name) %>%  nrow()` distinct stations serve the A train. Of the `r filter(nyc_transit_tidy, route_name == "A") %>% distinct(line, station_name) %>% nrow()` stations that serve the A train, `r filter(nyc_transit_tidy, route_name == "A", ada == "TRUE") %>%  distinct(line, station_name) %>%  nrow()` are ADA compliant.
+There are `r filter(nyc_transit_tidy, route_number == "A") %>% distinct(line, station_name) %>%  nrow()` distinct stations serve the A train. Of the `r filter(nyc_transit_tidy, route_number == "A") %>% distinct(line, station_name) %>% nrow()` stations that serve the A train, `r filter(nyc_transit_tidy, route_number == "A", ada == "TRUE") %>%  distinct(line, station_name) %>%  nrow()` are ADA compliant.
 
 #Problem 3
 
@@ -155,7 +155,7 @@ pols_month_df =
          relocate(year, month_name) %>% 
          rename("month" = "month_name") %>% 
          mutate(
-                 president = recode(prez_gop, "1" = "gop", "2" = "gop", "0" = "dem")
+                 president = recode(prez_gop, "1" = "gop", "0" = "dem")
          ) %>% 
         select(-prez_dem) %>%
         select(-prez_gop) %>% 
@@ -211,6 +211,8 @@ The second dataset is the snp_df dataset. It contains the information on year, m
 The third dataset is the unemploy_df dataset. It contains the information on year, month, and percentage of unemployment on the associated date. It have `r nrow(unemploy_df)` rows and `r ncol(unemploy_df)` columns in total. The range of year is ranged from `r min(pull(unemploy_df, year))` to `r max(pull(unemploy_df, year))`. The key variable is the unemployment_rate variable which contains the information on the percentage of unemployment on the associated date. 
 
 The last dataset is the joint_df dataset, which contains the information on year, month, type of president, number of republican governors, number of republican senators, number of republican representatives, number of democratic governors, number of democratic senators, number of democratic representatives, the closing values of the S&P stock index, and percentage of unemployment on the associated date. It have `r nrow(joint_df)` rows and `r ncol(joint_df)` columns in total. The range of year is ranged from `r min(pull(joint_df, year))` to `r max(pull(joint_df, year))`.
+
+For the steps of data wrangling, I import all the datasets at first, then, I clean all the datasets by using clean_names fuction in janitor library and by using separate funtion to break up the variable mon into integer variables year, month, and day.Finally, I merge all the dataset into one dataset using merge function joint by mon variable and year variable.
 
 
 
